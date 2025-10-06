@@ -1,5 +1,5 @@
 // api/admin/login.js
-import { query } from "../_db.js";
+import { query } from "../../_db.js";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
