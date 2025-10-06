@@ -15,7 +15,7 @@ export default function Login() {
 
     try {
       // Call backend login API
-      const res = await api.post("/admin/login.js", { username, password });
+      const res = await api.post("/admin/login", { username, password });
 
       if (res.data.token) {
         // Save JWT token in localStorage
