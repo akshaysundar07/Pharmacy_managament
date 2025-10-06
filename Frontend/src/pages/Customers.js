@@ -80,8 +80,9 @@ export default function Customers() {
   // Filtered list
   // -------------------------
   const filtered = customers.filter((c) =>
-    c.Name.toLowerCase().includes(q.toLowerCase())
+  (c.Name || "").toLowerCase().includes(q.toLowerCase())
   );
+
 
   return (
     <div>
