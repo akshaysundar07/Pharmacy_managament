@@ -13,7 +13,7 @@ app.use(express.json());
 // -----------------------
 // JWT Config
 // -----------------------
-const JWT_SECRET = "super-secret-key";
+const JWT_SECRET = "super-secret-key"; // Change to process.env.JWT_SECRET in production
 
 // -----------------------
 // MySQL Connection Helper
@@ -21,7 +21,7 @@ const JWT_SECRET = "super-secret-key";
 const dbConfig = {
     host: "localhost",
     user: "root",
-    password: "Bommisetty@123",
+    password: "Bommisetty@123", // change if needed
     database: "pharmacy"
 };
 
@@ -42,6 +42,7 @@ const adminRequired = async (req, res, next) => {
         req.adminId = decoded.id;
         next();
     } catch (err) {
+        console.error("Auth error:", err);
         return res.status(401).json({ msg: "Invalid token" });
     }
 };
@@ -50,16 +51,20 @@ const adminRequired = async (req, res, next) => {
 // Background Scheduler
 // -----------------------
 cron.schedule("*/5 * * * *", async () => {
-    const db = await getDbConnection();
+    try {
+        const db = await getDbConnection();
 
-    const [lowStock] = await db.execute("SELECT * FROM Medicines WHERE Stock_Quantity < 10");
-    if (lowStock.length > 0) console.log("[ALERT] Low stock medicines:", lowStock.map(m => m.Name));
+        const [lowStock] = await db.execute("SELECT * FROM Medicines WHERE Stock_Quantity < 10");
+        if (lowStock.length > 0) console.log("[ALERT] Low stock medicines:", lowStock.map(m => m.Name));
 
-    const today = new Date().toISOString().split("T")[0];
-    const [expired] = await db.execute("SELECT * FROM Medicines WHERE Expiry_Date < ?", [today]);
-    if (expired.length > 0) console.log("[ALERT] Expired medicines:", expired.map(m => m.Name));
+        const today = new Date().toISOString().split("T")[0];
+        const [expired] = await db.execute("SELECT * FROM Medicines WHERE Expiry_Date < ?", [today]);
+        if (expired.length > 0) console.log("[ALERT] Expired medicines:", expired.map(m => m.Name));
 
-    await db.end();
+        await db.end();
+    } catch (err) {
+        console.error("Cron error:", err);
+    }
 });
 
 // -----------------------
@@ -74,31 +79,41 @@ app.get("/", (req, res) => {
 // -----------------------
 app.post("/api/admin/register", async (req, res) => {
     const { username, password } = req.body;
-    const db = await getDbConnection();
     try {
-        const [result] = await db.execute("INSERT INTO Admins (Username, Password) VALUES (?, ?)", [username, password]);
+        const hashed = await bcrypt.hash(password, 10);
+        const db = await getDbConnection();
+        const [result] = await db.execute("INSERT INTO Admins (Username, Password) VALUES (?, ?)", [username, hashed]);
         await db.end();
         res.status(201).json({ msg: "Admin registered", admin_id: result.insertId });
     } catch (err) {
-        await db.end();
+        console.error("Register error:", err);
         res.status(400).json({ error: err.message });
     }
 });
 
 app.post("/api/admin/login", async (req, res) => {
     const { username, password } = req.body;
-    const db = await getDbConnection();
     try {
-        const [admins] = await db.execute("SELECT * FROM Admins WHERE Username = ? AND Password = ?", [username, password]);
+        const db = await getDbConnection();
+        const [admins] = await db.execute("SELECT * FROM Admins WHERE Username = ?", [username]);
         await db.end();
-        if (admins.length === 0) return res.status(401).json({ msg: "Invalid credentials" });
+
+        if (admins.length === 0) {
+            return res.status(401).json({ msg: "Invalid username or password" });
+        }
 
         const admin = admins[0];
+        const match = await bcrypt.compare(password, admin.Password);
+
+        if (!match) {
+            return res.status(401).json({ msg: "Invalid username or password" });
+        }
+
         const token = jwt.sign({ id: admin.Admin_ID, role: "admin" }, JWT_SECRET, { expiresIn: "1h" });
-        res.json({ msg: "Login successful", token });
+        return res.json({ msg: "Login successful", token });
     } catch (err) {
-        await db.end();
-        res.status(400).json({ error: err.message });
+        console.error("Login error:", err);
+        return res.status(500).json({ error: "Server error" });
     }
 });
 
@@ -106,39 +121,62 @@ app.post("/api/admin/login", async (req, res) => {
 // Customers CRUD
 // -----------------------
 app.get("/api/customers", adminRequired, async (req, res) => {
-    const db = await getDbConnection();
-    const [customers] = await db.execute("SELECT * FROM Customers");
-    await db.end();
-    res.json(customers);
+    try {
+        const db = await getDbConnection();
+        const [customers] = await db.execute("SELECT * FROM Customers");
+        await db.end();
+        res.json(customers);
+    } catch (err) {
+        console.error("Customers fetch error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
 });
 
 app.post("/api/customers", adminRequired, async (req, res) => {
     const { Name, Phone_Number, Email } = req.body;
-    const db = await getDbConnection();
-    const [result] = await db.execute("INSERT INTO Customers (Name, Phone_Number, Email) VALUES (?, ?, ?)", [Name, Phone_Number, Email]);
-    await db.end();
-    res.status(201).json({ msg: "Customer added", customer_id: result.insertId });
+    try {
+        const db = await getDbConnection();
+        const [result] = await db.execute(
+            "INSERT INTO Customers (Name, Phone_Number, Email) VALUES (?, ?, ?)",
+            [Name, Phone_Number, Email]
+        );
+        await db.end();
+        res.status(201).json({ msg: "Customer added", customer_id: result.insertId });
+    } catch (err) {
+        console.error("Customer add error:", err);
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // -----------------------
 // Medicines CRUD
 // -----------------------
 app.get("/api/medicines", async (req, res) => {
-    const db = await getDbConnection();
-    const [medicines] = await db.execute("SELECT * FROM Medicines");
-    await db.end();
-    res.status(200).json(medicines);
+    try {
+        const db = await getDbConnection();
+        const [medicines] = await db.execute("SELECT * FROM Medicines");
+        await db.end();
+        res.status(200).json(medicines);
+    } catch (err) {
+        console.error("Medicines fetch error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
 });
 
 app.post("/api/medicines", adminRequired, async (req, res) => {
     const { Name, Category, Manufacturer, Price, Stock_Quantity, Batch_No, Expiry_Date } = req.body;
-    const db = await getDbConnection();
-    const [result] = await db.execute(
-        "INSERT INTO Medicines (Name, Category, Manufacturer, Price, Stock_Quantity, Batch_No, Expiry_Date) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [Name, Category, Manufacturer, Price, Stock_Quantity, Batch_No, Expiry_Date]
-    );
-    await db.end();
-    res.status(201).json({ msg: "Medicine added", medicine_id: result.insertId });
+    try {
+        const db = await getDbConnection();
+        const [result] = await db.execute(
+            "INSERT INTO Medicines (Name, Category, Manufacturer, Price, Stock_Quantity, Batch_No, Expiry_Date) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [Name, Category, Manufacturer, Price, Stock_Quantity, Batch_No, Expiry_Date]
+        );
+        await db.end();
+        res.status(201).json({ msg: "Medicine added", medicine_id: result.insertId });
+    } catch (err) {
+        console.error("Medicine add error:", err);
+        res.status(400).json({ error: err.message });
+    }
 });
 
 // -----------------------
@@ -146,8 +184,8 @@ app.post("/api/medicines", adminRequired, async (req, res) => {
 // -----------------------
 app.post("/api/prescriptions", adminRequired, async (req, res) => {
     const data = req.body;
-    const db = await getDbConnection();
     try {
+        const db = await getDbConnection();
         const [presResult] = await db.execute(
             "INSERT INTO Prescriptions (Doctor_Name, Date_Issued, Customer_ID, Duration) VALUES (?, ?, ?, ?)",
             [data.Doctor_Name, new Date().toISOString().split("T")[0], data.Customer_ID, data.Duration]
@@ -164,32 +202,37 @@ app.post("/api/prescriptions", adminRequired, async (req, res) => {
         await db.end();
         res.status(201).json({ msg: "Prescription added", prescription_id: prescriptionId });
     } catch (err) {
-        await db.end();
+        console.error("Prescription add error:", err);
         res.status(400).json({ error: err.message });
     }
 });
 
 app.get("/api/prescriptions", adminRequired, async (req, res) => {
-    const db = await getDbConnection();
-    const [prescriptions] = await db.execute(`
-        SELECT p.Prescription_ID, p.Doctor_Name, p.Date_Issued, p.Duration, c.Name AS Customer_Name
-        FROM Prescriptions p
-        JOIN Customers c ON p.Customer_ID = c.Customer_ID
-    `);
+    try {
+        const db = await getDbConnection();
+        const [prescriptions] = await db.execute(`
+            SELECT p.Prescription_ID, p.Doctor_Name, p.Date_Issued, p.Duration, c.Name AS Customer_Name
+            FROM Prescriptions p
+            JOIN Customers c ON p.Customer_ID = c.Customer_ID
+        `);
 
-    for (let pres of prescriptions) {
-        const [meds] = await db.execute(`
-            SELECT m.Name AS Medicine_Name, pm.Dosage
-            FROM Prescription_Medicines pm
-            JOIN Medicines m ON pm.Medicine_ID = m.Medicine_ID
-            WHERE pm.Prescription_ID = ?
-        `, [pres.Prescription_ID]);
-        pres.Medicines = meds;
-        pres.Date_Issued = pres.Date_Issued.toISOString().split("T")[0];
+        for (let pres of prescriptions) {
+            const [meds] = await db.execute(`
+                SELECT m.Name AS Medicine_Name, pm.Dosage
+                FROM Prescription_Medicines pm
+                JOIN Medicines m ON pm.Medicine_ID = m.Medicine_ID
+                WHERE pm.Prescription_ID = ?
+            `, [pres.Prescription_ID]);
+            pres.Medicines = meds;
+            pres.Date_Issued = pres.Date_Issued.toISOString().split("T")[0];
+        }
+
+        await db.end();
+        res.json(prescriptions);
+    } catch (err) {
+        console.error("Prescription fetch error:", err);
+        res.status(500).json({ error: "Server error" });
     }
-
-    await db.end();
-    res.json(prescriptions);
 });
 
 // -----------------------
@@ -197,10 +240,10 @@ app.get("/api/prescriptions", adminRequired, async (req, res) => {
 // -----------------------
 app.post("/api/sales", adminRequired, async (req, res) => {
     const data = req.body;
-    const db = await getDbConnection();
-    let totalAmount = 0;
-
     try {
+        const db = await getDbConnection();
+        let totalAmount = 0;
+
         // Calculate total
         for (let item of data.medicines) {
             const [medRows] = await db.execute("SELECT Stock_Quantity, Price FROM Medicines WHERE Medicine_ID=?", [item.Medicine_ID]);
@@ -230,7 +273,7 @@ app.post("/api/sales", adminRequired, async (req, res) => {
         await db.end();
         res.status(201).json({ msg: "Sale recorded", sale_id: saleId });
     } catch (err) {
-        await db.end();
+        console.error("Sales error:", err);
         res.status(400).json({ error: err.message });
     }
 });
@@ -238,5 +281,5 @@ app.post("/api/sales", adminRequired, async (req, res) => {
 // -----------------------
 // Run Server
 // -----------------------
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001; // use 5001 locally to avoid macOS conflict
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

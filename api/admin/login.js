@@ -1,3 +1,4 @@
+// api/admin/login.js
 import { query } from "../_db.js";
 import jwt from "jsonwebtoken";
 
@@ -12,10 +13,10 @@ export default async function handler(req, res) {
   try {
     console.log("🔑 Admin login attempt:", username);
 
-    // Query pharmacy.admins schema
+    // Direct plain-text check
     const rows = await query(
       "SELECT * FROM pharmacy.admins WHERE username = $1 AND password = $2",
-      [username, password]  // ⚠️ plain-text password for now
+      [username, password]
     );
 
     if (rows.length === 0) {
@@ -29,9 +30,9 @@ export default async function handler(req, res) {
       { expiresIn: "1h" }
     );
 
-    res.status(200).json({ token });
+    return res.status(200).json({ msg: "Login successful", token });
   } catch (err) {
     console.error("❌ Admin login error:", err.message);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    return res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 }
