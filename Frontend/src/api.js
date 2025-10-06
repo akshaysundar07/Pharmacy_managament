@@ -3,7 +3,7 @@ import axios from "axios";
 
 // Create an Axios instance
 const api = axios.create({
-  baseURL: "http://127.0.0.1:5000/api", // Your Flask backend URL
+  baseURL: "http://pharmacy-managament.vercel.app/", // Your Flask backend URL
 });
 
 // Automatically attach JWT token if present
