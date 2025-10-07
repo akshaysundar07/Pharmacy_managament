@@ -1,3 +1,4 @@
+// src/pages/Inventory.js
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
@@ -16,7 +17,7 @@ export default function Inventory() {
 
   // ✅ Fetch medicines
   useEffect(() => {
-    fetch("http://localhost:5000/api/medicines", {
+    fetch("/api/medicines", {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -26,7 +27,7 @@ export default function Inventory() {
 
   // ✅ Fetch current user (optional — depends if you expose /api/me)
   useEffect(() => {
-    fetch("http://localhost:5000/api/me", {
+    fetch("/api/me", {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -35,7 +36,7 @@ export default function Inventory() {
   }, [token]);
 
   const meds = useMemo(() => {
-    return medicines.filter(m => m.Name?.toLowerCase().includes(q.toLowerCase()));
+    return medicines.filter(m => m.name?.toLowerCase().includes(q.toLowerCase()));
   }, [q, medicines]);
 
   const toggleSelect = (id) => {
@@ -57,18 +58,18 @@ export default function Inventory() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const parsed = {
-      Name: formData.get("Name"),
-      Batch_No: formData.get("Batch_No"),
-      Expiry_Date: formData.get("Expiry_Date"),
-      Stock_Quantity: Number(formData.get("Stock_Quantity") || 0),
-      Price: Number(formData.get("Price") || 0),
-      Category: formData.get("Category") || '',
-      Manufacturer: formData.get("Manufacturer") || ''
+      name: formData.get("name"),
+      batch_no: formData.get("batch_no"),
+      expiry_date: formData.get("expiry_date"),
+      stock_quantity: Number(formData.get("stock_quantity") || 0),
+      price: Number(formData.get("price") || 0),
+      category: formData.get("category") || '',
+      manufacturer: formData.get("manufacturer") || ''
     };
 
     const url = editing
-      ? `http://localhost:5000/api/medicines/${editing.Medicine_ID}`
-      : "http://localhost:5000/api/medicines";
+      ? `/api/medicines/${editing.medicine_id}`
+      : "/api/medicines";
 
     fetch(url, {
       method: editing ? "PUT" : "POST",
@@ -81,7 +82,7 @@ export default function Inventory() {
       .then(res => res.json())
       .then(() => {
         setEditing(null);
-        return fetch("http://localhost:5000/api/medicines", {
+        return fetch("/api/medicines", {
           headers: { Authorization: `Bearer ${token}` }
         });
       })
@@ -97,12 +98,12 @@ export default function Inventory() {
       return;
     }
     if (window.confirm('Delete medicine?')) {
-      fetch(`http://localhost:5000/api/medicines/${id}`, {
+      fetch(`/api/medicines/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(() => {
-          setMedicines(medicines.filter(m => m.Medicine_ID !== id));
+          setMedicines(medicines.filter(m => m.medicine_id !== id));
         })
         .catch(err => console.error("Error deleting medicine:", err));
     }
@@ -128,13 +129,13 @@ export default function Inventory() {
           <div className="card">
             <h2 className="font-semibold mb-2">{editing ? 'Edit' : 'Add'} Medicine</h2>
             <form onSubmit={save} className="grid md:grid-cols-2 gap-3">
-              <input name="Name" className="input" placeholder="Name" defaultValue={editing?.Name || ''} required />
-              <input name="Batch_No" className="input" placeholder="Batch" defaultValue={editing?.Batch_No || ''} required />
-              <input name="Expiry_Date" type="date" className="input" defaultValue={editing?.Expiry_Date || ''} required />
-              <input name="Stock_Quantity" type="number" className="input" placeholder="Stock" defaultValue={editing?.Stock_Quantity || 0} min="0" required />
-              <input name="Price" type="number" step="0.01" className="input" placeholder="Price" defaultValue={editing?.Price || 0} min="0" required />
-              <input name="Category" className="input" placeholder="Category" defaultValue={editing?.Category || ''} />
-              <input name="Manufacturer" className="input" placeholder="Manufacturer" defaultValue={editing?.Manufacturer || ''} />
+              <input name="name" className="input" placeholder="Name" defaultValue={editing?.name || ''} required />
+              <input name="batch_no" className="input" placeholder="Batch" defaultValue={editing?.batch_no || ''} required />
+              <input name="expiry_date" type="date" className="input" defaultValue={editing?.expiry_date || ''} required />
+              <input name="stock_quantity" type="number" className="input" placeholder="Stock" defaultValue={editing?.stock_quantity || 0} min="0" required />
+              <input name="price" type="number" step="0.01" className="input" placeholder="Price" defaultValue={editing?.price || 0} min="0" required />
+              <input name="category" className="input" placeholder="Category" defaultValue={editing?.category || ''} />
+              <input name="manufacturer" className="input" placeholder="Manufacturer" defaultValue={editing?.manufacturer || ''} />
               <div className="md:col-span-2 flex gap-2">
                 <button className="btn">Save</button>
                 {editing && <button type="button" onClick={() => setEditing(null)} className="px-3 py-2 rounded border">Cancel</button>}
@@ -160,21 +161,21 @@ export default function Inventory() {
               </thead>
               <tbody>
                 {meds.map(m => {
-                  const low = (m.Stock_Quantity || 0) <= 10;
-                  const soon = new Date(m.Expiry_Date) <= (() => { const x = new Date(); x.setDate(x.getDate() + 30); return x; })();
+                  const low = (m.stock_quantity || 0) <= 10;
+                  const soon = new Date(m.expiry_date) <= (() => { const x = new Date(); x.setDate(x.getDate() + 30); return x; })();
                   return (
-                    <tr key={m.Medicine_ID} className={(low || soon) ? 'bg-yellow-50' : ''}>
-                      <td>{m.Medicine_ID}</td>
-                      <td className="py-2">{m.Name}</td>
-                      <td>{m.Batch_No}</td>
-                      <td>{m.Expiry_Date}</td>
-                      <td>{m.Stock_Quantity}</td>
-                      <td>₹ {Number(m.Price).toFixed(2)}</td>
-                      <td>{m.Category || '—'}</td>
-                      <td>{m.Manufacturer || '—'}</td>
+                    <tr key={m.medicine_id} className={(low || soon) ? 'bg-yellow-50' : ''}>
+                      <td>{m.medicine_id}</td>
+                      <td className="py-2">{m.name}</td>
+                      <td>{m.batch_no}</td>
+                      <td>{m.expiry_date}</td>
+                      <td>{m.stock_quantity}</td>
+                      <td>₹ {Number(m.price).toFixed(2)}</td>
+                      <td>{m.category || '—'}</td>
+                      <td>{m.manufacturer || '—'}</td>
                       <td className="text-right space-x-2">
                         <button onClick={() => setEditing(m)} className="px-2 py-1 rounded border">Edit</button>
-                        <button onClick={() => del(m.Medicine_ID)} className="px-2 py-1 rounded border">Delete</button>
+                        <button onClick={() => del(m.medicine_id)} className="px-2 py-1 rounded border">Delete</button>
                       </td>
                     </tr>
                   );
@@ -203,27 +204,27 @@ export default function Inventory() {
               </thead>
               <tbody>
                 {meds.map(m => {
-                  const low = (m.Stock_Quantity || 0) <= 10;
-                  const soon = new Date(m.Expiry_Date) <= (() => { const x = new Date(); x.setDate(x.getDate() + 30); return x; })();
-                  const isSelected = selected.includes(m.Medicine_ID);
+                  const low = (m.stock_quantity || 0) <= 10;
+                  const soon = new Date(m.expiry_date) <= (() => { const x = new Date(); x.setDate(x.getDate() + 30); return x; })();
+                  const isSelected = selected.includes(m.medicine_id);
                   return (
-                    <tr key={m.Medicine_ID} className={(low || soon) ? 'bg-yellow-50' : ''}>
+                    <tr key={m.medicine_id} className={(low || soon) ? 'bg-yellow-50' : ''}>
                       <td className="py-2">
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => toggleSelect(m.Medicine_ID)}
-                          disabled={m.Stock_Quantity <= 0}
+                          onChange={() => toggleSelect(m.medicine_id)}
+                          disabled={m.stock_quantity <= 0}
                         />
                       </td>
-                      <td>{m.Medicine_ID}</td>
-                      <td className="py-2">{m.Name}</td>
-                      <td>{m.Batch_No}</td>
-                      <td>{m.Expiry_Date}</td>
-                      <td>{m.Stock_Quantity}</td>
-                      <td>₹ {Number(m.Price).toFixed(2)}</td>
-                      <td>{m.Category || '—'}</td>
-                      <td>{m.Manufacturer || '—'}</td>
+                      <td>{m.medicine_id}</td>
+                      <td className="py-2">{m.name}</td>
+                      <td>{m.batch_no}</td>
+                      <td>{m.expiry_date}</td>
+                      <td>{m.stock_quantity}</td>
+                      <td>₹ {Number(m.price).toFixed(2)}</td>
+                      <td>{m.category || '—'}</td>
+                      <td>{m.manufacturer || '—'}</td>
                     </tr>
                   );
                 })}
