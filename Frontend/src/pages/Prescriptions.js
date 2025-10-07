@@ -1,3 +1,4 @@
+// src/pages/Prescriptions.js
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
@@ -12,8 +13,8 @@ export default function Prescriptions() {
   const [doctorName, setDoctorName] = useState("");
   const [dateIssued, setDateIssued] = useState("");
   const [duration, setDuration] = useState("");
-
   const [medicineList, setMedicineList] = useState([{ medicineId: "", dosage: 1 }]);
+
   const [customers, setCustomers] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
@@ -21,7 +22,7 @@ export default function Prescriptions() {
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/customers", {
+    fetch("/api/customers", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -30,7 +31,7 @@ export default function Prescriptions() {
   }, [token]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/medicines", {
+    fetch("/api/medicines", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -38,8 +39,8 @@ export default function Prescriptions() {
         if (Array.isArray(data)) {
           setMedicines(
             data.map((m) => ({
-              medicine_id: m.Medicine_ID,
-              name: m.Name,
+              medicine_id: m.medicine_id,
+              name: m.name,
             }))
           );
         }
@@ -48,7 +49,7 @@ export default function Prescriptions() {
   }, [token]);
 
   const loadPrescriptions = () => {
-    fetch("http://localhost:5000/api/prescriptions", {
+    fetch("/api/prescriptions", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -82,19 +83,19 @@ export default function Prescriptions() {
     }
 
     const data = {
-      Doctor_Name: doctorName,
-      Date_Issued: dateIssued,
-      Customer_ID: customerId,
-      Duration: duration,
+      doctor_name: doctorName,
+      date_issued: dateIssued,
+      customer_id: customerId,
+      duration,
       medicines: validMeds.map((m) => ({
-        Medicine_ID: m.medicineId,
-        Dosage: m.dosage,
+        medicine_id: m.medicineId,
+        dosage: m.dosage,
       })),
     };
 
     const url = editing
-      ? `http://localhost:5000/api/prescriptions/${editing.Prescription_ID}`
-      : "http://localhost:5000/api/prescriptions";
+      ? `/api/prescriptions/${editing.prescription_id}`
+      : "/api/prescriptions";
 
     fetch(url, {
       method: editing ? "PUT" : "POST",
@@ -126,12 +127,12 @@ export default function Prescriptions() {
 
   const del = (id) => {
     if (window.confirm("Delete prescription?")) {
-      fetch(`http://localhost:5000/api/prescriptions/${id}`, {
+      fetch(`/api/prescriptions/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(() => {
-          setPrescriptions(prescriptions.filter((p) => p.Prescription_ID !== id));
+          setPrescriptions(prescriptions.filter((p) => p.prescription_id !== id));
         })
         .catch((err) => console.error(err));
     }
@@ -168,8 +169,8 @@ export default function Prescriptions() {
               >
                 <option value="">Select customer</option>
                 {customers.map((c) => (
-                  <option key={c.Customer_ID} value={c.Customer_ID}>
-                    {c.Customer_ID} - {c.Name}
+                  <option key={c.customer_id} value={c.customer_id}>
+                    {c.customer_id} - {c.name}
                   </option>
                 ))}
               </select>
@@ -190,13 +191,12 @@ export default function Prescriptions() {
               <input className="input" value={duration} onChange={(e) => setDuration(e.target.value)} required />
             </div>
 
-            {/* Medicines Section with scroll */}
+            {/* Medicines Section */}
             <div>
               <label className="block text-sm mb-1">Medicines</label>
               <div className="max-h-48 overflow-y-auto border rounded-lg p-2 bg-gray-50">
                 {medicineList.map((m, idx) => (
                   <div key={idx} className="grid grid-cols-2 gap-2 items-center mb-2">
-                    {/* Medicine Dropdown */}
                     <select
                       className="input"
                       value={m.medicineId}
@@ -215,7 +215,6 @@ export default function Prescriptions() {
                       ))}
                     </select>
 
-                    {/* Dosage */}
                     <div className="flex items-center gap-2">
                       <input
                         type="number"
@@ -270,20 +269,20 @@ export default function Prescriptions() {
               </thead>
               <tbody>
                 {prescriptions.map((p) => (
-                  <tr key={p.Prescription_ID}>
-                    <td>{p.Prescription_ID}</td>
-                    <td>{p.Doctor_Name}</td>
-                    <td>{p.Date_Issued}</td>
-                    <td>{p.Duration}</td>
+                  <tr key={p.prescription_id}>
+                    <td>{p.prescription_id}</td>
+                    <td>{p.doctor_name}</td>
+                    <td>{p.date_issued}</td>
+                    <td>{p.duration}</td>
                     <td>
-                      {Array.isArray(p.Medicines)
-                        ? p.Medicines.map((m) => `${m.Name} (x${m.Dosage})`).join(", ")
+                      {Array.isArray(p.medicines)
+                        ? p.medicines.map((m) => `${m.name} (x${m.dosage})`).join(", ")
                         : "-"}
                     </td>
-                    <td>{p.Customer_Name || p.Customer_ID}</td>
+                    <td>{p.customer_name || p.customer_id}</td>
                     <td className="flex gap-2">
                       <button onClick={() => setEditing(p)} className="btn-outline px-2 py-1">Edit</button>
-                      <button onClick={() => del(p.Prescription_ID)} className="btn-outline px-2 py-1">Delete</button>
+                      <button onClick={() => del(p.prescription_id)} className="btn-outline px-2 py-1">Delete</button>
                     </td>
                   </tr>
                 ))}

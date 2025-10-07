@@ -18,7 +18,7 @@ export default function Billing() {
   const [selectedMedicines, setSelectedMedicines] = useState([]);
   const [total, setTotal] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [receipt, setReceipt] = useState(null); // ✅ store receipt after payment
+  const [receipt, setReceipt] = useState(null);
 
   const token = localStorage.getItem("token");
 
@@ -28,30 +28,30 @@ export default function Billing() {
   }, [stateCustomerId, customerIdFromUrl]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/customers", {
+    fetch("/api/customers", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          setCustomers(data.map(c => ({ id: c.Customer_ID, name: c.Name })));
+          setCustomers(data.map(c => ({ id: c.customer_id, name: c.name })));
         }
       })
       .catch(err => console.error(err));
   }, [token]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/medicines", {
+    fetch("/api/medicines", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
       .then(data => {
         if (!Array.isArray(data)) return;
         const normalized = data.map(m => ({
-          id: m.Medicine_ID,
-          name: m.Name,
-          price: Number(m.Price) || 0,
-          stock: Number(m.Stock_Quantity) || 0
+          id: m.medicine_id,
+          name: m.name,
+          price: Number(m.price) || 0,
+          stock: Number(m.stock_quantity) || 0
         }));
         setMedicines(normalized);
 
@@ -109,12 +109,12 @@ export default function Billing() {
     }
 
     const sale = {
-      Customer_ID: selectedCustomer,
-      Payment_Method: paymentMethod,
-      medicines: selectedMedicines.map(m => ({ Medicine_ID: m.id, Quantity: m.qty })),
+      customer_id: selectedCustomer,
+      payment_method: paymentMethod,
+      medicines: selectedMedicines.map(m => ({ medicine_id: m.id, quantity: m.qty })),
     };
 
-    fetch("http://localhost:5000/api/sales", {
+    fetch("/api/sales", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(sale)
@@ -126,7 +126,6 @@ export default function Billing() {
       .then(data => {
         alert("Payment successful! Sale ID: " + data.sale_id);
 
-        // ✅ Store receipt for display
         setReceipt({
           saleId: data.sale_id,
           customer: customers.find(c => c.id === selectedCustomer)?.name || "Walk-in",
@@ -211,7 +210,6 @@ export default function Billing() {
         </div>
       </div>
 
-      {/* ✅ Receipt display */}
       {receipt && (
         <div className="card mt-6 p-4 border rounded shadow-lg bg-white">
           <h2 className="font-bold text-xl mb-2">Receipt</h2>
