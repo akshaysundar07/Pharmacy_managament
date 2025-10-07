@@ -44,7 +44,7 @@ export default function Customers() {
     try {
       if (editing) {
         // update
-        await api.put(`/customers/${editing.Customer_ID}`, data, {
+        await api.put(`/customers/${editing.customer_id}`, data, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } else {
@@ -80,9 +80,8 @@ export default function Customers() {
   // Filtered list
   // -------------------------
   const filtered = customers.filter((c) =>
-  (c.Name || "").toLowerCase().includes(q.toLowerCase())
+    (c.name || "").toLowerCase().includes(q.toLowerCase())
   );
-
 
   return (
     <div>
@@ -104,30 +103,30 @@ export default function Customers() {
           </h2>
           {editing && (
             <div className="mb-2 p-2 bg-gray-100 rounded">
-              ID: {editing.Customer_ID}
+              ID: {editing.customer_id}
             </div>
           )}
           <form onSubmit={save} className="grid gap-3">
             <input
-              name="Name"
+              name="name"
               className="input"
               placeholder="Full Name"
-              defaultValue={editing?.Name || ""}
+              defaultValue={editing?.name || ""}
               required
             />
             <input
-              name="Email"
+              name="email"
               type="email"
               className="input"
               placeholder="Email"
-              defaultValue={editing?.Email || ""}
+              defaultValue={editing?.email || ""}
               required
             />
             <input
-              name="Phone_Number"
+              name="phone_number"
               className="input"
               placeholder="Phone"
-              defaultValue={editing?.Phone_Number || ""}
+              defaultValue={editing?.phone_number || ""}
               required
             />
             <div className="flex gap-2">
@@ -162,17 +161,17 @@ export default function Customers() {
               </thead>
               <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.Customer_ID}>
-                    <td className="py-2">{c.Customer_ID}</td>
-                    <td>{c.Name}</td>
-                    <td>{c.Email}</td>
-                    <td>{c.Phone_Number}</td>
+                  <tr key={c.customer_id}>
+                    <td className="py-2">{c.customer_id}</td>
+                    <td>{c.name}</td>
+                    <td>{c.email}</td>
+                    <td>{c.phone_number}</td>
                     <td className="text-right space-x-2">
                       <button
                         className="px-2 py-1 rounded border bg-blue-100 text-blue-700"
                         onClick={() =>
                           navigate(
-                            `/prescriptions?customerId=${c.Customer_ID}&hideNav=true`
+                            `/prescriptions?customerId=${c.customer_id}&hideNav=true`
                           )
                         }
                       >
@@ -182,7 +181,7 @@ export default function Customers() {
                         className="px-2 py-1 rounded border bg-green-100 text-green-700"
                         onClick={() =>
                           navigate(
-                            `/inventory?customerId=${c.Customer_ID}&fromPrescription=true&hideNav=true`
+                            `/inventory?customerId=${c.customer_id}&fromPrescription=true&hideNav=true`
                           )
                         }
                       >
@@ -196,7 +195,7 @@ export default function Customers() {
                       </button>
                       <button
                         className="px-2 py-1 rounded border"
-                        onClick={() => del(c.Customer_ID)}
+                        onClick={() => del(c.customer_id)}
                       >
                         Delete
                       </button>
